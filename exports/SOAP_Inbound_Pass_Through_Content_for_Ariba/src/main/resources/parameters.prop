@@ -1,0 +1,9 @@
+#Thu Apr 09 20:31:13 UTC 2026
+Location\ ID=${header.ccLocationID}
+Private\ Key\ Alias=
+UserRole=ESBMessaging.send
+Timeout=60000
+Authentication=Basic
+Credential\ Name=${header.credentialName}
+Proxy\ Type=sapcc
+receiveCIGSOAP=/receiveCIGSOAP

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><parameters><parameter>
+    <key/>
+    <name>Location ID</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata/>
+  </parameter><parameter>
+    <key/>
+    <name>Private Key Alias</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata/>
+  </parameter><parameter>
+    <key/>
+    <name>UserRole</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata/>
+  </parameter><parameter>
+    <key/>
+    <name>Timeout</name>
+    <type>xsd:integer</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata/>
+  </parameter><parameter>
+    <key/>
+    <name>Authentication</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata>
+      <isCombobox>true</isCombobox>
+    </additionalMetadata>
+  </parameter><parameter>
+    <key/>
+    <name>Credential Name</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata/>
+  </parameter><parameter>
+    <key/>
+    <name>Proxy Type</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata>
+      <isCombobox>true</isCombobox>
+    </additionalMetadata>
+  </parameter><parameter>
+    <key/>
+    <name>receiveCIGSOAP</name>
+    <type>xsd:string</type>
+    <isRequired>false</isRequired>
+    <constraint/>
+    <description/>
+    <additionalMetadata/>
+  </parameter><param_references><reference attribute_category="SAP" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::Plain SOAP/direction::Receiver/version::1.6.3/attrId::proxyType" attribute_uilabel="Proxy Type" param_key="Proxy Type"/><reference attribute_category="SAP.Receiver.Auth" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::Plain SOAP/direction::Receiver/version::1.6.3/attrId::privateKeyAlias" attribute_uilabel="Private Key Alias" param_key="Private Key Alias"/><reference attribute_category="SAP.Receiver.Auth" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::Plain SOAP/direction::Receiver/version::1.6.3/attrId::credentialName" attribute_uilabel="Credential Name" param_key="Credential Name"/><reference attribute_category="SAP" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::Plain SOAP/direction::Receiver/version::1.6.3/attrId::location_id" attribute_uilabel="Location ID" param_key="Location ID"/><reference attribute_category="SAP" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::Plain SOAP/direction::Receiver/version::1.6.3/attrId::requestTimeout" attribute_uilabel="Timeout (in ms)" param_key="Timeout"/><reference attribute_category="SAP" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::Plain SOAP/direction::Receiver/version::1.6.3/attrId::authentication" attribute_uilabel="Authentication" param_key="Authentication"/><reference attribute_category="CIG.Receiver.System" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.4.2/attrId::address" attribute_uilabel="Address" param_key="receiveCIGSOAP"/><reference attribute_category="CIG" attribute_id="ctype::AdapterVariant/cname::SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.4.2/attrId::userRole" attribute_uilabel="" param_key="UserRole"/></param_references></parameters>

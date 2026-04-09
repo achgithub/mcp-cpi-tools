@@ -35,10 +35,10 @@ export async function createPackage(id: string, name: string, description = ""):
   const data = await apiPost<PackageDetail>("/IntegrationPackages", {
     Id: id,
     Name: name,
+    ShortText: description || name,
     Description: description,
     Version: "1.0.0",
     Vendor: "",
-    Mode: "EDIT_ALLOWED",
     SupportedPlatform: "SAP Cloud Integration",
   });
   return data.d;

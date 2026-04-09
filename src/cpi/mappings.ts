@@ -17,8 +17,7 @@ interface MappingDetail { d: MessageMapping }
 
 export async function listMappings(packageId: string): Promise<MessageMapping[]> {
   const data = await apiGet<MappingList>(
-    "/MessageMappingDesigntimeArtifacts",
-    { $filter: `PackageId eq '${packageId}'` }
+    `/IntegrationPackages('${encodeURIComponent(packageId)}')/MessageMappingDesigntimeArtifacts`
   );
   return data.d.results;
 }

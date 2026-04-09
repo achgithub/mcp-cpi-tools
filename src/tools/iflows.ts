@@ -25,10 +25,13 @@ export function registerIFlowTools(server: McpServer): void {
   server.tool(
     "get_iflow",
     "Get metadata for a specific iFlow.",
-    { iflow_id: z.string().describe("The iFlow ID") },
-    async ({ iflow_id }) => {
+    {
+      iflow_id: z.string().describe("The iFlow ID"),
+      package_id: z.string().optional().describe("Package ID — required on some tenants"),
+    },
+    async ({ iflow_id, package_id }) => {
       try {
-        const iflow = await api.getIFlow(iflow_id);
+        const iflow = await api.getIFlow(iflow_id, package_id);
         return ok(formatJson(iflow));
       } catch (e) {
         return err(extractErrorMessage(e));
@@ -154,6 +157,38 @@ export function registerIFlowTools(server: McpServer): void {
       try {
         const base64 = await api.downloadIFlow(iflow_id);
         return ok(`iFlow '${iflow_id}' artifact (base64 ZIP):\n\n${base64}`);
+      } catch (e) {
+        return err(extractErrorMessage(e));
+      }
+    }
+  );
+
+  server.tool(
+    "save_iflow_to_disk",
+    "Download an iFlow artifact ZIP and extract all files to the local exports folder (/exports/{iflow_id}/). Avoids passing large base64 blobs through the conversation.",
+    { iflow_id: z.string().describe("The iFlow ID to download and extract") },
+    async ({ iflow_id }) => {
+      try {
+        const files = await api.saveIFlowToDisk(iflow_id, "/exports");
+        return ok(
+          `Extracted ${files.length} file(s) to /exports/${iflow_id}/\n\n${files.map((f) => f.replace("/exports/", "")).join("\n")}`
+        );
+      } catch (e) {
+        return err(extractErrorMessage(e));
+      }
+    }
+  );
+
+  server.tool(
+    "get_iflow_bpmn",
+    "Download an iFlow artifact and extract the BPMN XML (.iflw file). Returns the full process definition so you can analyse or describe the integration flow design.",
+    { iflow_id: z.string().describe("The iFlow ID") },
+    async ({ iflow_id }) => {
+      try {
+        const { filename, xml, otherFiles } = await api.getIFlowBpmn(iflow_id);
+        return ok(
+          `File: ${filename}\n\nOther files in artifact: ${otherFiles.join(", ")}\n\n--- BPMN XML ---\n\n${xml}`
+        );
       } catch (e) {
         return err(extractErrorMessage(e));
       }

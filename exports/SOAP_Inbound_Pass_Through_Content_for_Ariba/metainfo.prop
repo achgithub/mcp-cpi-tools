@@ -1,0 +1,5 @@
+#Store metainfo properties
+#Thu Apr 09 20:31:13 UTC 2026
+description=Integration flows for the SOAP transactions from Ariba Network to SAP ERP or SAP S/4HANA
+source=SAPAribaCloudIntegrationGateway
+target=SAPS4HANA,SAPERP

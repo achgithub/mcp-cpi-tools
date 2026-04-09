@@ -44,15 +44,17 @@ interface EndpointList { d: { results: ServiceEndpoint[] } }
 
 export async function listIFlows(packageId: string): Promise<IFlow[]> {
   const data = await apiGet<IFlowList>(
-    "/IntegrationDesigntimeArtifacts",
-    { $filter: `PackageId eq '${packageId}'` }
+    `/IntegrationPackages('${encodeURIComponent(packageId)}')/IntegrationDesigntimeArtifacts`
   );
   return data.d.results;
 }
 
-export async function getIFlow(id: string): Promise<IFlow> {
+export async function getIFlow(id: string, packageId?: string): Promise<IFlow> {
+  const base = packageId
+    ? `/IntegrationPackages('${encodeURIComponent(packageId)}')/IntegrationDesigntimeArtifacts`
+    : "/IntegrationDesigntimeArtifacts";
   const data = await apiGet<IFlowDetail>(
-    `/IntegrationDesigntimeArtifacts(Id='${encodeURIComponent(id)}',Version='active')`
+    `${base}(Id='${encodeURIComponent(id)}',Version='active')`
   );
   return data.d;
 }
@@ -63,6 +65,48 @@ export async function downloadIFlow(id: string): Promise<string> {
     `/IntegrationDesigntimeArtifacts(Id='${encodeURIComponent(id)}',Version='active')/$value`
   );
   return buf.toString("base64");
+}
+
+// Saves the iFlow artifact ZIP to disk and extracts all files
+export async function saveIFlowToDisk(id: string, outputDir: string): Promise<string[]> {
+  const buf = await apiGetRaw(
+    `/IntegrationDesigntimeArtifacts(Id='${encodeURIComponent(id)}',Version='active')/$value`
+  );
+  const AdmZip = (await import("adm-zip")).default;
+  const fs = await import("fs");
+  const path = await import("path");
+
+  const zip = new AdmZip(buf);
+  const targetDir = path.join(outputDir, id);
+  fs.mkdirSync(targetDir, { recursive: true });
+  zip.extractAllTo(targetDir, true);
+
+  return zip.getEntries()
+    .filter((e) => !e.isDirectory)
+    .map((e) => path.join(targetDir, e.entryName));
+}
+
+// Extracts the .iflw BPMN XML from the artifact ZIP
+export async function getIFlowBpmn(id: string): Promise<{ filename: string; xml: string; otherFiles: string[] }> {
+  const buf = await apiGetRaw(
+    `/IntegrationDesigntimeArtifacts(Id='${encodeURIComponent(id)}',Version='active')/$value`
+  );
+  const AdmZip = (await import("adm-zip")).default;
+  const zip = new AdmZip(buf);
+  const entries = zip.getEntries();
+
+  const iflwEntry = entries.find((e) => e.entryName.endsWith(".iflw"));
+  if (!iflwEntry) throw new Error("No .iflw file found in artifact ZIP");
+
+  const otherFiles = entries
+    .filter((e) => !e.isDirectory && e.entryName !== iflwEntry.entryName)
+    .map((e) => e.entryName);
+
+  return {
+    filename: iflwEntry.entryName,
+    xml: iflwEntry.getData().toString("utf-8"),
+    otherFiles,
+  };
 }
 
 // artifactContent = base64-encoded ZIP
@@ -146,7 +190,7 @@ export async function updateIFlowConfiguration(
 }
 
 export async function getServiceEndpoints(iflowId?: string): Promise<ServiceEndpoint[]> {
-  const params = iflowId ? { $filter: `Name eq '${iflowId}'` } : {};
+  const params: Record<string, string> = iflowId ? { $filter: `Name eq '${iflowId}'` } : {};
   const data = await apiGet<EndpointList>("/ServiceEndpoints", params);
   return data.d.results;
 }
