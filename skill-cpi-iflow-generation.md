@@ -40,17 +40,23 @@ Every `.iflw` file follows this structure:
         <bpmn2:extensionElements>
             <!-- iFlow-level settings -->
         </bpmn2:extensionElements>
-        <!-- Sender participant (external system) -->
-        <bpmn2:participant id="Participant_1" name="Sender" />
+        <!-- Sender participant — ifl:type="ParticipantSender" is REQUIRED for CPI to render the channel -->
+        <bpmn2:participant id="Participant_Sender" name="Sender" ifl:type="ParticipantSender">
+            <bpmn2:extensionElements>
+                <ifl:property><key>PD_REQ</key><value>true</value></ifl:property>
+            </bpmn2:extensionElements>
+        </bpmn2:participant>
         <!-- Integration Process participant -->
         <bpmn2:participant id="Participant_Process_1"
-            ifl:type="IntegrationProcess"
             name="Integration Process"
             processRef="Process_1">
-            <bpmn2:extensionElements/>
+            <bpmn2:extensionElements>
+                <ifl:property><key>componentVersion</key><value>1.1.0</value></ifl:property>
+                <ifl:property><key>id</key><value>Participant_Process_1</value></ifl:property>
+            </bpmn2:extensionElements>
         </bpmn2:participant>
-        <!-- Receiver participant (external system) -->
-        <bpmn2:participant id="Participant_2" name="Receiver" />
+        <!-- Receiver participant — ifl:type="ParticipantReceiver" is REQUIRED for CPI to render the channel -->
+        <bpmn2:participant id="Participant_Receiver" name="Receiver" ifl:type="ParticipantReceiver"/>
         <!-- Adapter connections -->
         <bpmn2:messageFlow id="MessageFlow_1" name="HTTPS"
             sourceRef="Participant_1" targetRef="StartEvent_1">
@@ -1175,6 +1181,7 @@ HTTPS inbound → Content Modifier → HTTP outbound:
 ## Generation Rules
 
 1. **Every element needs a unique ID** — use descriptive names, not just numbers
+0. **External participants MUST have `ifl:type`** — Sender participant needs `ifl:type="ParticipantSender"`, Receiver needs `ifl:type="ParticipantReceiver"`. Without these CPI won't render the adapter channels in the UI.
 2. **SequenceFlows wire the process** — every step needs `<bpmn2:incoming>` and `<bpmn2:outgoing>` matching SequenceFlow IDs
 3. **MessageFlows connect adapters** — sourceRef/targetRef must match participant IDs and start/end event IDs
 4. **Request-Reply uses ServiceTask** — not callActivity; the receiver adapter goes on a MessageFlow from ServiceTask

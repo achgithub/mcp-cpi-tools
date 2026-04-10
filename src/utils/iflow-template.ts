@@ -13,9 +13,16 @@ export interface HttpIFlowConfig {
 function manifest(id: string, name: string): string {
   return [
     "Manifest-Version: 1.0",
+    "Bundle-ManifestVersion: 2",
     `Bundle-Name: ${name}`,
-    `Bundle-SymbolicName: ${id}`,
-    "Bundle-Version: 1.1.0",
+    `Bundle-SymbolicName: ${id};singleton:=true`,
+    `Origin-Bundle-SymbolicName: ${id}`,
+    "Bundle-Version: 1.0.0",
+    "Origin-Bundle-Version: 1.0.0",
+    `Origin-Bundle-Name: ${name}`,
+    "SAP-BundleType: IntegrationFlow",
+    "SAP-NodeType: IFLMAP",
+    "SAP-RuntimeProfile: iflmap",
     `SAP_MANIFEST_NAME: ${name}`,
     "",
   ].join("\n");
