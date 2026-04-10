@@ -40,14 +40,18 @@ Every `.iflw` file follows this structure:
         <bpmn2:extensionElements>
             <!-- iFlow-level settings -->
         </bpmn2:extensionElements>
-        <!-- Sender participant — ifl:type="ParticipantSender" is REQUIRED for CPI to render the channel -->
-        <bpmn2:participant id="Participant_Sender" name="Sender" ifl:type="ParticipantSender">
+        <!-- Sender participant.
+             - HTTP/HTTPS flows: no ifl:type needed on the participant element itself.
+             - SFTP and most other channel-based adapters: MUST have ifl:type="EndpointSender"
+               as BOTH an XML attribute AND an ifl:property inside extensionElements. -->
+        <bpmn2:participant id="Participant_Sender" name="Sender1" ifl:type="EndpointSender">
             <bpmn2:extensionElements>
-                <ifl:property><key>PD_REQ</key><value>true</value></ifl:property>
+                <ifl:property><key>ifl:type</key><value>EndpointSender</value></ifl:property>
             </bpmn2:extensionElements>
         </bpmn2:participant>
-        <!-- Integration Process participant -->
+        <!-- Integration Process participant — ifl:type="IntegrationProcess" is REQUIRED -->
         <bpmn2:participant id="Participant_Process_1"
+            ifl:type="IntegrationProcess"
             name="Integration Process"
             processRef="Process_1">
             <bpmn2:extensionElements>
@@ -55,8 +59,13 @@ Every `.iflw` file follows this structure:
                 <ifl:property><key>id</key><value>Participant_Process_1</value></ifl:property>
             </bpmn2:extensionElements>
         </bpmn2:participant>
-        <!-- Receiver participant — ifl:type="ParticipantReceiver" is REQUIRED for CPI to render the channel -->
-        <bpmn2:participant id="Participant_Receiver" name="Receiver" ifl:type="ParticipantReceiver"/>
+        <!-- Receiver participant — same rule: SFTP/channel adapters need ifl:type="EndpointRecevier"
+             NOTE: "EndpointRecevier" is a SAP typo — use the misspelling exactly. -->
+        <bpmn2:participant id="Participant_Receiver" name="Receiver1" ifl:type="EndpointRecevier">
+            <bpmn2:extensionElements>
+                <ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property>
+            </bpmn2:extensionElements>
+        </bpmn2:participant>
         <!-- Adapter connections -->
         <bpmn2:messageFlow id="MessageFlow_1" name="HTTPS"
             sourceRef="Participant_1" targetRef="StartEvent_1">
@@ -172,8 +181,8 @@ Every `.iflw` file follows this structure:
 | SOAP 1.x | Receiver | `ctype::AdapterVariant/cname::sap:SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.10.0` |
 | JMS | Sender (poll) | `ctype::AdapterVariant/cname::sap:JMS/tp::Not Applicable/mp::Not Applicable/direction::Sender/version::1.4.3` |
 | JMS | Receiver (write) | `ctype::AdapterVariant/cname::sap:JMS/tp::Not Applicable/mp::Not Applicable/direction::Receiver/version::1.6.3` |
-| SFTP (polling) | Sender | `ctype::AdapterVariant/cname::sap:PollingSFTP/tp::SFTP/mp::File/direction::Sender/version::1.3.0` |
-| SFTP | Sender | `ctype::AdapterVariant/cname::sap:SFTP/tp::SFTP/mp::File/direction::Sender/version::1.10.0` |
+| SFTP | Sender (polling, user/password) | `ctype::AdapterVariant/cname::sap:SFTP/tp::SFTP/mp::File/direction::Sender/version::1.20.1` |
+| SFTP | Receiver (public key) | `ctype::AdapterVariant/cname::sap:SFTP/tp::SFTP/mp::File/direction::Receiver/version::1.13.3` |
 | IDoc SOAP | Sender | `ctype::AdapterVariant/cname::sap:IDOC/tp::HTTP/mp::IDoc SOAP/direction::Sender/version::1.4.3` |
 | IDoc SOAP | Receiver | `ctype::AdapterVariant/cname::sap:IDOC/tp::HTTP/mp::IDoc SOAP/direction::Receiver/version::1.8.1` |
 | XI | Sender | `ctype::AdapterVariant/cname::sap:XI/tp::HTTP/mp::XI/direction::Sender/version::1.19.1` |
@@ -376,6 +385,174 @@ The messageFlow connects the EndEvent (or ServiceTask for Request-Reply) to an e
         <ifl:property><key>ComponentSWCVId</key><value>1.6.3</value></ifl:property>
     </bpmn2:extensionElements>
 </bpmn2:messageFlow>
+```
+
+---
+
+### SFTP Sender (poll files — user/password auth)
+
+The SFTP Sender polls files from a remote SFTP server on a schedule. Each file becomes one message exchange.
+
+**Important:** The sender participant MUST use `ifl:type="EndpointSender"` as both XML attribute and `ifl:property`. The `system` property must match the participant `name` attribute exactly.
+
+```xml
+<!-- Participant in collaboration: -->
+<bpmn2:participant id="Participant_Sender" name="Sender1" ifl:type="EndpointSender">
+    <bpmn2:extensionElements>
+        <ifl:property><key>ifl:type</key><value>EndpointSender</value></ifl:property>
+    </bpmn2:extensionElements>
+</bpmn2:participant>
+
+<!-- MessageFlow from participant to StartEvent: -->
+<bpmn2:messageFlow id="MessageFlow_Sender" name="SFTP"
+    sourceRef="Participant_Sender" targetRef="StartEvent_1">
+    <bpmn2:extensionElements>
+        <ifl:property><key>ComponentType</key><value>SFTP</value></ifl:property>
+        <ifl:property><key>ComponentNS</key><value>sap</value></ifl:property>
+        <ifl:property><key>componentVersion</key><value>1.20</value></ifl:property>
+        <ifl:property><key>Name</key><value>SFTP</value></ifl:property>
+        <ifl:property><key>system</key><value>Sender1</value></ifl:property>
+        <!-- Connection -->
+        <ifl:property><key>host</key><value>{{SenderHost}}</value></ifl:property>
+        <ifl:property><key>port</key><value>{{SenderPort}}</value></ifl:property>
+        <ifl:property><key>credential_name</key><value>{{SenderCredentialName}}</value></ifl:property>
+        <!-- NOTE: property name is credential_name (underscore), NOT credentialName -->
+        <ifl:property><key>authentication</key><value>user_password</value></ifl:property>
+        <!-- authentication: "user_password" | "public_key" -->
+        <ifl:property><key>username</key><value/></ifl:property>
+        <!-- File selection -->
+        <ifl:property><key>path</key><value>{{SenderDirectory}}</value></ifl:property>
+        <!-- NOTE: property name is "path", NOT "directoryName" -->
+        <ifl:property><key>fileName</key><value>*</value></ifl:property>
+        <!-- fileName: supports wildcards, e.g. "*.xml", "*" for all files -->
+        <!-- Post-processing -->
+        <ifl:property><key>noop</key><value>delete</value></ifl:property>
+        <!-- noop: "delete" (delete after processing) | "move" (archive) | "none" (leave, may reprocess) -->
+        <!-- NOTE: property name is "noop" NOT "deleteFile" -->
+        <ifl:property><key>file.move</key><value>.archive</value></ifl:property>
+        <!-- file.move: archive subdirectory used when noop=move -->
+        <!-- Polling schedule (XML-escaped table) -->
+        <ifl:property>
+            <key>scheduleKey</key>
+            <value>&lt;row&gt;&lt;cell id='scheduleType'&gt;timer&lt;/cell&gt;&lt;cell id='startTime'&gt;&lt;/cell&gt;&lt;cell id='endTime'&gt;&lt;/cell&gt;&lt;cell id='timerCron'&gt;&lt;/cell&gt;&lt;cell id='timerInterval'&gt;1&lt;/cell&gt;&lt;cell id='timerIntervalUnit'&gt;minutes&lt;/cell&gt;&lt;cell id='weekDays'&gt;&lt;/cell&gt;&lt;cell id='timerDay'&gt;&lt;/cell&gt;&lt;/row&gt;</value>
+        </ifl:property>
+        <!-- Concurrency and limits -->
+        <ifl:property><key>maxMessagesPerPoll</key><value>20</value></ifl:property>
+        <ifl:property><key>disconnect</key><value>1</value></ifl:property>
+        <ifl:property><key>readLock</key><value>none</value></ifl:property>
+        <ifl:property><key>idempotentRepository</key><value>database</value></ifl:property>
+        <ifl:property><key>emptyFileHandling</key><value>processFile</value></ifl:property>
+        <ifl:property><key>maximumFileSize</key><value>40</value></ifl:property>
+        <ifl:property><key>sftpSecEnabled</key><value>1</value></ifl:property>
+        <ifl:property><key>sorting</key><value>none</value></ifl:property>
+        <ifl:property><key>includeSubFolders</key><value>0</value></ifl:property>
+        <!-- Protocol metadata -->
+        <ifl:property><key>TransportProtocol</key><value>SFTP</value></ifl:property>
+        <ifl:property><key>MessageProtocol</key><value>File</value></ifl:property>
+        <ifl:property><key>TransportProtocolVersion</key><value>1.20.1</value></ifl:property>
+        <ifl:property><key>MessageProtocolVersion</key><value>1.20.1</value></ifl:property>
+        <ifl:property><key>ComponentSWCVName</key><value>external</value></ifl:property>
+        <ifl:property><key>ComponentSWCVId</key><value>1.20.1</value></ifl:property>
+        <ifl:property>
+            <key>cmdVariantUri</key>
+            <value>ctype::AdapterVariant/cname::sap:SFTP/tp::SFTP/mp::File/direction::Sender/version::1.20.1</value>
+        </ifl:property>
+    </bpmn2:extensionElements>
+</bpmn2:messageFlow>
+```
+
+**Key properties:**
+- `host` / `port`: SFTP server hostname and port — always externalize: `{{SenderHost}}`, `{{SenderPort}}`
+- `path`: remote directory — property name is `path` (NOT `directoryName`)
+- `credential_name`: deployed Security Material alias — property name uses underscore (NOT `credentialName`)
+- `authentication`: `user_password` for username+password; `public_key` for key-based
+- `noop`: `delete` removes file after processing; `move` archives to `file.move` subdirectory; `none` leaves it (risks reprocessing)
+- `system`: must exactly match the `name` attribute on the participant element
+- `scheduleKey`: XML-escaped table row controlling polling interval (timer/cron)
+
+---
+
+### SFTP Receiver (write file — public key auth)
+
+**Important:** The receiver participant MUST use `ifl:type="EndpointRecevier"` (SAP's typo — note the misspelling) as both XML attribute and `ifl:property`.
+
+```xml
+<!-- Participant in collaboration: -->
+<bpmn2:participant id="Participant_Receiver" name="Receiver1" ifl:type="EndpointRecevier">
+    <bpmn2:extensionElements>
+        <ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property>
+    </bpmn2:extensionElements>
+</bpmn2:participant>
+
+<!-- MessageFlow from EndEvent to participant: -->
+<bpmn2:messageFlow id="MessageFlow_Receiver" name="SFTP"
+    sourceRef="EndEvent_1" targetRef="Participant_Receiver">
+    <bpmn2:extensionElements>
+        <ifl:property><key>ComponentType</key><value>SFTP</value></ifl:property>
+        <ifl:property><key>ComponentNS</key><value>sap</value></ifl:property>
+        <ifl:property><key>componentVersion</key><value>1.13</value></ifl:property>
+        <ifl:property><key>Name</key><value>SFTP</value></ifl:property>
+        <ifl:property><key>system</key><value>Receiver1</value></ifl:property>
+        <!-- Connection -->
+        <ifl:property><key>host</key><value>{{ReceiverHost}}</value></ifl:property>
+        <ifl:property><key>port</key><value>{{ReceiverPort}}</value></ifl:property>
+        <ifl:property><key>authentication</key><value>public_key</value></ifl:property>
+        <!-- authentication: "public_key" | "user_password" -->
+        <ifl:property><key>privateKeyAlias</key><value>{{ReceiverPrivateKeyAlias}}</value></ifl:property>
+        <!-- privateKeyAlias: name of SSH key in Security Material (for public_key auth) -->
+        <ifl:property><key>username</key><value>{{ReceiverUsername}}</value></ifl:property>
+        <ifl:property><key>credential_name</key><value/></ifl:property>
+        <!-- credential_name: empty for public_key auth; set for user_password auth -->
+        <!-- File target -->
+        <ifl:property><key>path</key><value>{{ReceiverDirectory}}</value></ifl:property>
+        <!-- NOTE: property name is "path", NOT "directoryName" -->
+        <ifl:property><key>fileName</key><value>${header.CamelFileName}</value></ifl:property>
+        <!-- fileName: use ${header.CamelFileName} to preserve original name, or set a static/dynamic name -->
+        <!-- File handling -->
+        <ifl:property><key>fileExist</key><value>Override</value></ifl:property>
+        <!-- fileExist: "Override" | "Append" | "Fail" | "Ignore" -->
+        <ifl:property><key>autoCreate</key><value>1</value></ifl:property>
+        <!-- autoCreate: 1 = create target directory if it doesn't exist -->
+        <ifl:property><key>sftpSecEnabled</key><value>1</value></ifl:property>
+        <ifl:property><key>disconnect</key><value>1</value></ifl:property>
+        <ifl:property><key>maximumFileSize</key><value>40</value></ifl:property>
+        <!-- Protocol metadata -->
+        <ifl:property><key>TransportProtocol</key><value>SFTP</value></ifl:property>
+        <ifl:property><key>MessageProtocol</key><value>File</value></ifl:property>
+        <ifl:property><key>TransportProtocolVersion</key><value>1.13.3</value></ifl:property>
+        <ifl:property><key>MessageProtocolVersion</key><value>1.13.3</value></ifl:property>
+        <ifl:property><key>ComponentSWCVName</key><value>external</value></ifl:property>
+        <ifl:property><key>ComponentSWCVId</key><value>1.13.3</value></ifl:property>
+        <ifl:property>
+            <key>cmdVariantUri</key>
+            <value>ctype::AdapterVariant/cname::sap:SFTP/tp::SFTP/mp::File/direction::Receiver/version::1.13.3</value>
+        </ifl:property>
+    </bpmn2:extensionElements>
+</bpmn2:messageFlow>
+```
+
+**Key properties:**
+- `privateKeyAlias`: name of the SSH private key deployed in Security Material (public key auth only)
+- `username`: the SFTP username (required for public key auth; `credential_name` holds both user+pass for user_password auth)
+- `fileExist`: how to handle existing files — `Override` replaces, `Append` appends, `Fail` throws error
+- `fileName`: to write files with a dynamic name computed in the flow, use `${header.CamelFileName}` or set a Groovy-computed header before this step
+- `autoCreate`: `1` = create the target directory automatically if missing
+
+**Participant type reminder (SFTP):**
+```xml
+<!-- SFTP Sender participant — ifl:type on element AND as ifl:property -->
+<bpmn2:participant id="Participant_Sender" name="Sender1" ifl:type="EndpointSender">
+    <bpmn2:extensionElements>
+        <ifl:property><key>ifl:type</key><value>EndpointSender</value></ifl:property>
+    </bpmn2:extensionElements>
+</bpmn2:participant>
+
+<!-- SFTP Receiver participant — NOTE the SAP typo: "EndpointRecevier" not "EndpointReceiver" -->
+<bpmn2:participant id="Participant_Receiver" name="Receiver1" ifl:type="EndpointRecevier">
+    <bpmn2:extensionElements>
+        <ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property>
+    </bpmn2:extensionElements>
+</bpmn2:participant>
 ```
 
 ---
@@ -597,7 +774,7 @@ def Message processData(Message message) {
         </ifl:property>
         <ifl:property><key>grouping</key><value/></ifl:property>
         <ifl:property><key>splitType</key><value>GeneralSplitter</value></ifl:property>
-        <ifl:property><key>timeOut</key><value>300</value></ifl:parameter>
+        <ifl:property><key>timeOut</key><value>300</value></ifl:property>
     </bpmn2:extensionElements>
     <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
     <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
@@ -1181,7 +1358,10 @@ HTTPS inbound → Content Modifier → HTTP outbound:
 ## Generation Rules
 
 1. **Every element needs a unique ID** — use descriptive names, not just numbers
-0. **External participants MUST have `ifl:type`** — Sender participant needs `ifl:type="ParticipantSender"`, Receiver needs `ifl:type="ParticipantReceiver"`. Without these CPI won't render the adapter channels in the UI.
+0. **External participant `ifl:type` depends on adapter type:**
+   - **HTTP/HTTPS flows**: participants work without any `ifl:type` attribute.
+   - **SFTP and most other channel-based adapters**: participants MUST have `ifl:type` set in two places — as an XML attribute on `<bpmn2:participant>` AND as an `<ifl:property>` inside `extensionElements`. Sender = `EndpointSender`; Receiver = `EndpointRecevier` (SAP typo — note the misspelling, use it exactly). Without these, CPI won't render the adapter channels.
+   - The `name` attribute on each participant must exactly match the `system` property value in the connected messageFlow.
 2. **SequenceFlows wire the process** — every step needs `<bpmn2:incoming>` and `<bpmn2:outgoing>` matching SequenceFlow IDs
 3. **MessageFlows connect adapters** — sourceRef/targetRef must match participant IDs and start/end event IDs
 4. **Request-Reply uses ServiceTask** — not callActivity; the receiver adapter goes on a MessageFlow from ServiceTask
@@ -1200,7 +1380,6 @@ HTTPS inbound → Content Modifier → HTTP outbound:
 
 ## Known Gaps (verify with real examples on trial tenant)
 
-- SFTP adapter: full property set for read/write (polling interval, archiving, file patterns)
 - AS2 adapter: MDN configuration, signing/encryption property names
 - OData V2 receiver: operation type, entity set, query options properties
 - XI adapter: quality of service, party/service properties
