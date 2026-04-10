@@ -902,29 +902,64 @@ Every element must have a `BPMNShape` (for nodes) or `BPMNEdge` (for flows). Pos
 
 ---
 
-## Externalized Parameters
+## Externalized Parameters (Environment Promotion)
 
-Parameters use `{{ParameterName}}` syntax in property values. They are defined in `parameters.prop`:
+Externalized parameters are the mechanism for **environment-specific configuration** — the iFlow BPMN is identical across Dev, QAS, and Prod, but each environment has different values for the parameters. This is how SAP CPI handles environment promotion: you transport the iFlow and then configure the parameter values per environment in the tenant's Integration Operations → Configure section.
 
+**Example:** A parameter `SAPHOST` holds the target SAP system URL. On Dev it is `https://dev.example.com`, QAS `https://qas.example.com`, Prod `https://prod.example.com`. The iFlow uses `{{SAPHOST}}` and never hardcodes the URL.
+
+**In BPMN property values:** use `{{ParameterName}}` anywhere a value would otherwise be hardcoded:
+```xml
+<ifl:property><key>address</key><value>{{SAPHOST}}/api/endpoint</value></ifl:property>
+<ifl:property><key>credentialName</key><value>{{SAP_CREDENTIAL}}</value></ifl:property>
+```
+
+**`parameters.prop`** — defines the parameter keys and their default values (used as the baseline / Dev values when the iFlow is first deployed):
 ```
 # parameters.prop
-TargetURL=https://default.example.com/api
-MaxRetries=3
+SAPHOST=https://dev-sap.example.com
+SAP_CREDENTIAL=DevCredential
+MAX_RETRIES=3
 ```
 
-And declared in `parameters.propdef` (XML):
+**`parameters.propdef`** — declares the parameters with metadata (type, description). Required so CPI knows the parameters exist and shows them in the Configure UI:
 ```xml
 <parameters>
     <parameter>
-        <key>TargetURL</key>
-        <value>https://default.example.com/api</value>
+        <key>SAPHOST</key>
+        <value>https://dev-sap.example.com</value>
         <datatype>xsd:string</datatype>
-        <description>Target system URL</description>
+        <description>Target SAP system base URL — set per environment on deployment</description>
+    </parameter>
+    <parameter>
+        <key>SAP_CREDENTIAL</key>
+        <value>DevCredential</value>
+        <datatype>xsd:string</datatype>
+        <description>Security Material credential alias for target SAP system</description>
+    </parameter>
+    <parameter>
+        <key>MAX_RETRIES</key>
+        <value>3</value>
+        <datatype>xsd:integer</datatype>
+        <description>Maximum retry attempts for outbound calls</description>
     </parameter>
 </parameters>
 ```
 
-Usage in BPMN: `<value>{{TargetURL}}</value>`
+**What to externalize (always):**
+- Target system URLs / hostnames (`SAPHOST`, `TARGET_URL`)
+- Credential alias names (`CRED_BACKEND`, `CRED_SFTP`)
+- Queue names that differ per environment (`JMS_QUEUE_INBOUND`)
+- Any retry/timeout values that may need tuning per environment
+- Feature flags (`ENABLE_RETRY`, `LOG_LEVEL`)
+
+**What NOT to externalize:**
+- Static structural values (XPath expressions, fixed field names)
+- Values that are truly the same in every environment
+
+**Runtime variables vs externalized params:**
+- `{{ParamName}}` — resolved at deploy/configure time, set in CPI Operations UI per environment
+- `${property.X}` / `${header.X}` — Apache Camel Simple Language, resolved at message runtime from exchange state
 
 ---
 
@@ -1146,7 +1181,7 @@ HTTPS inbound → Content Modifier → HTTP outbound:
 11. **Timer start event** uses `bpmn2:timerEventDefinition` inside the `bpmn2:startEvent`
 12. **Local process call** references process by `processId` property = the `id` of a sibling `bpmn2:process`
 13. **ProcessDirect** adapter: sender iFlow uses ProcessDirect Receiver; calling iFlow uses ProcessDirect Sender
-14. **Externalized params** use `{{ParamName}}` syntax in property values
+14. **Externalized params** use `{{ParamName}}` syntax — these are environment-specific values (Dev/QAS/Prod URLs, credential names, queue names) configured per tenant after transport; never hardcode these values in BPMN
 
 ---
 
