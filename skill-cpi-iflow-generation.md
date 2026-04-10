@@ -946,16 +946,22 @@ MAX_RETRIES=3
 </parameters>
 ```
 
-**What to externalize (always):**
-- Target system URLs / hostnames (`SAPHOST`, `TARGET_URL`)
+**The rule: if it could ever need to change between environments without touching the iFlow code, externalize it.**
+
+Anything a Basis/ops person might need to change on QAS or Prod without involving a developer or transport is a candidate. Examples:
+- URLs and hostnames (`TARGET_URL`, `SAPHOST`)
+- Port numbers (`BACKEND_PORT`)
 - Credential alias names (`CRED_BACKEND`, `CRED_SFTP`)
-- Queue names that differ per environment (`JMS_QUEUE_INBOUND`)
-- Any retry/timeout values that may need tuning per environment
-- Feature flags (`ENABLE_RETRY`, `LOG_LEVEL`)
+- Queue names (`JMS_QUEUE_INBOUND`)
+- Retry counts and timeout values (`MAX_RETRIES`, `CALL_TIMEOUT`)
+- Debug/trace flags (`DEBUG_ENABLED=false` on Prod, `true` on Dev)
+- Log levels (`LOG_LEVEL`)
+- Feature flags (`ENABLE_RETRY`, `SKIP_VALIDATION`)
+- Any threshold or limit that might be tuned per environment
 
 **What NOT to externalize:**
-- Static structural values (XPath expressions, fixed field names)
-- Values that are truly the same in every environment
+- Values that are structurally part of the integration logic (XPath expressions, fixed field mappings)
+- Values guaranteed identical in every environment forever
 
 **Runtime variables vs externalized params:**
 - `{{ParamName}}` — resolved at deploy/configure time, set in CPI Operations UI per environment
