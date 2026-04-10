@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import * as api from "../cpi/iflows.js";
-import { buildHttpIFlowZip } from "../utils/iflow-template.js";
+import { buildHttpIFlowZip, buildIFlowZipFromBpmn } from "../utils/iflow-template.js";
 import { ok, err, formatJson } from "../utils/format.js";
 import { extractErrorMessage } from "../cpi/client.js";
 
@@ -58,6 +58,27 @@ export function registerIFlowTools(server: McpServer): void {
           id, name, senderAddress: sender_address, receiverUrl: receiver_url,
           senderMethod: sender_method, receiverMethod: receiver_method, description,
         });
+        const iflow = await api.createIFlow(id, name, package_id, artifactContent, description);
+        return ok(`iFlow '${iflow.Id}' created in package '${package_id}'.\n\nCall deploy_iflow to activate it.`);
+      } catch (e) {
+        return err(extractErrorMessage(e));
+      }
+    }
+  );
+
+  server.tool(
+    "create_iflow_from_bpmn",
+    "Create a new iFlow by supplying raw BPMN XML. Use this for any iFlow type (SFTP, JMS, SOAP, etc.) that cannot be created from a fixed template. The BPMN XML must be a complete .iflw document. Use deploy_iflow afterward to activate it.",
+    {
+      id: z.string().describe("iFlow ID — no spaces, e.g. SFTP_To_SFTP_Timestamped"),
+      name: z.string().describe("Display name"),
+      package_id: z.string().describe("Package to create it in"),
+      bpmn_xml: z.string().describe("Complete BPMN XML string (.iflw content)"),
+      description: z.string().optional(),
+    },
+    async ({ id, name, package_id, bpmn_xml, description }) => {
+      try {
+        const artifactContent = buildIFlowZipFromBpmn(id, name, bpmn_xml, description);
         const iflow = await api.createIFlow(id, name, package_id, artifactContent, description);
         return ok(`iFlow '${iflow.Id}' created in package '${package_id}'.\n\nCall deploy_iflow to activate it.`);
       } catch (e) {

@@ -100,3 +100,18 @@ export function buildHttpIFlowZip(cfg: HttpIFlowConfig): string {
 
   return zip.toBuffer().toString("base64");
 }
+
+// Builds an iFlow ZIP from raw BPMN XML and returns it as base64
+export function buildIFlowZipFromBpmn(id: string, name: string, bpmnXml: string, description?: string): string {
+  const zip = new AdmZip();
+  const desc = description ?? "";
+
+  zip.addFile("META-INF/MANIFEST.MF", Buffer.from(manifest(id, name)));
+  zip.addFile("metainfo.prop", Buffer.from(metainfo(id, name, desc)));
+  zip.addFile(
+    `src/main/resources/scenarioflows/integrationflow/${id}.iflw`,
+    Buffer.from(bpmnXml)
+  );
+
+  return zip.toBuffer().toString("base64");
+}
