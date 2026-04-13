@@ -395,10 +395,15 @@ The SFTP Sender polls files from a remote SFTP server on a schedule. Each file b
 
 **Important:** The sender participant MUST use `ifl:type="EndpointSender"` as both XML attribute and `ifl:property`. The `system` property must match the participant `name` attribute exactly.
 
+**Dummy values:** Use `ZZ`-prefixed placeholders (e.g. `ZZHOST`, `ZZDIRECTORY`) for mandatory fields. Do NOT use `{{ParamName}}` externalization syntax — CPI requires a real value to exist before a parameter can be externalized, and parameter sets are often shared across iFlows and managed by the transport team. The developer who receives the iFlow handles externalization after import.
+
+**`allowedHeaderList`:** For SFTP-to-SFTP flows, add `CamelFileName` to the collaboration-level `allowedHeaderList` so the filename header propagates to the receiver.
+
 ```xml
 <!-- Participant in collaboration: -->
 <bpmn2:participant id="Participant_Sender" name="Sender1" ifl:type="EndpointSender">
     <bpmn2:extensionElements>
+        <ifl:property><key>enableBasicAuthentication</key><value>false</value></ifl:property>
         <ifl:property><key>ifl:type</key><value>EndpointSender</value></ifl:property>
     </bpmn2:extensionElements>
 </bpmn2:participant>
@@ -412,40 +417,60 @@ The SFTP Sender polls files from a remote SFTP server on a schedule. Each file b
         <ifl:property><key>componentVersion</key><value>1.20</value></ifl:property>
         <ifl:property><key>Name</key><value>SFTP</value></ifl:property>
         <ifl:property><key>system</key><value>Sender1</value></ifl:property>
-        <!-- Connection -->
-        <ifl:property><key>host</key><value>{{SenderHost}}</value></ifl:property>
-        <ifl:property><key>port</key><value>{{SenderPort}}</value></ifl:property>
-        <ifl:property><key>credential_name</key><value>{{SenderCredentialName}}</value></ifl:property>
-        <!-- NOTE: property name is credential_name (underscore), NOT credentialName -->
+        <ifl:property><key>direction</key><value>Sender</value></ifl:property>
+        <!-- Connection — use ZZ-prefixed dummy values, NOT {{param}} syntax -->
+        <ifl:property><key>host</key><value>ZZHOST</value></ifl:property>
         <ifl:property><key>authentication</key><value>user_password</value></ifl:property>
         <!-- authentication: "user_password" | "public_key" -->
+        <ifl:property><key>credential_name</key><value>ZZCREDENTIALNAME</value></ifl:property>
+        <!-- NOTE: property name is credential_name (underscore), NOT credentialName -->
         <ifl:property><key>username</key><value/></ifl:property>
-        <!-- File selection -->
-        <ifl:property><key>path</key><value>{{SenderDirectory}}</value></ifl:property>
+        <ifl:property><key>privateKeyAlias</key><value/></ifl:property>
+        <ifl:property><key>connectTimeout</key><value>10000</value></ifl:property>
+        <ifl:property><key>maximumReconnectAttempts</key><value>3</value></ifl:property>
+        <ifl:property><key>reconnectDelay</key><value>1000</value></ifl:property>
+        <!-- File selection — use ZZ-prefixed dummy values -->
+        <ifl:property><key>path</key><value>ZZDIRECTORY</value></ifl:property>
         <!-- NOTE: property name is "path", NOT "directoryName" -->
         <ifl:property><key>fileName</key><value>*</value></ifl:property>
-        <!-- fileName: supports wildcards, e.g. "*.xml", "*" for all files -->
+        <!-- fileName: supports wildcards e.g. "*.xml", "*" for all files -->
+        <ifl:property><key>regex_filter</key><value>0</value></ifl:property>
+        <ifl:property><key>recursive</key><value>0</value></ifl:property>
+        <ifl:property><key>stepwise</key><value>0</value></ifl:property>
+        <ifl:property><key>flatten</key><value>0</value></ifl:property>
         <!-- Post-processing -->
         <ifl:property><key>noop</key><value>delete</value></ifl:property>
-        <!-- noop: "delete" (delete after processing) | "move" (archive) | "none" (leave, may reprocess) -->
+        <!-- noop: "delete" (remove after processing) | "move" (archive) -->
         <!-- NOTE: property name is "noop" NOT "deleteFile" -->
         <ifl:property><key>file.move</key><value>.archive</value></ifl:property>
-        <!-- file.move: archive subdirectory used when noop=move -->
-        <!-- Polling schedule (XML-escaped table) -->
+        <ifl:property><key>doneFileName</key><value>${file:name}.done</value></ifl:property>
+        <!-- Polling schedule — default: every 1 hour, HST (learned from SFTPtoSFTPFromSkill2) -->
         <ifl:property>
             <key>scheduleKey</key>
-            <value>&lt;row&gt;&lt;cell id='scheduleType'&gt;timer&lt;/cell&gt;&lt;cell id='startTime'&gt;&lt;/cell&gt;&lt;cell id='endTime'&gt;&lt;/cell&gt;&lt;cell id='timerCron'&gt;&lt;/cell&gt;&lt;cell id='timerInterval'&gt;1&lt;/cell&gt;&lt;cell id='timerIntervalUnit'&gt;minutes&lt;/cell&gt;&lt;cell id='weekDays'&gt;&lt;/cell&gt;&lt;cell id='timerDay'&gt;&lt;/cell&gt;&lt;/row&gt;</value>
+            <value>&lt;row&gt;&lt;cell&gt;dayValue&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;monthValue&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;yearValue&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;dateType&lt;/cell&gt;&lt;cell&gt;DAILY&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;secondValue&lt;/cell&gt;&lt;cell&gt;0&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;minutesValue&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;hourValue&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;toInterval&lt;/cell&gt;&lt;cell&gt;1&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;fromInterval&lt;/cell&gt;&lt;cell&gt;0&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;OnEveryHour&lt;/cell&gt;&lt;cell&gt;1&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;timeType&lt;/cell&gt;&lt;cell&gt;TIME_HOUR_INTERVAL&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;timeZone&lt;/cell&gt;&lt;cell&gt;( UTC -10:00 ) Hawaii Standard Time(HST)&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;throwExceptionOnExpiry&lt;/cell&gt;&lt;cell&gt;true&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;second&lt;/cell&gt;&lt;cell&gt;*&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;minute&lt;/cell&gt;&lt;cell&gt;*&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;hour&lt;/cell&gt;&lt;cell&gt;*&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;day_of_month&lt;/cell&gt;&lt;cell&gt;?&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;month&lt;/cell&gt;&lt;cell&gt;*&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;dayOfWeek&lt;/cell&gt;&lt;cell&gt;*&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;year&lt;/cell&gt;&lt;cell&gt;*&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;startAt&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;endAt&lt;/cell&gt;&lt;cell&gt;&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;attributeBehaviour&lt;/cell&gt;&lt;cell&gt;isScheduleOnDayRequired,isScheduleRecurRequired,isScheduleAdvancedVisible&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;triggerType&lt;/cell&gt;&lt;cell&gt;cron&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;noOfSchedules&lt;/cell&gt;&lt;cell&gt;1&lt;/cell&gt;&lt;/row&gt;&lt;row&gt;&lt;cell&gt;schedule1&lt;/cell&gt;&lt;cell&gt;0+0+0+?+*+*+*&amp;amp;trigger.timeZone=HST&lt;/cell&gt;&lt;/row&gt;</value>
         </ifl:property>
         <!-- Concurrency and limits -->
         <ifl:property><key>maxMessagesPerPoll</key><value>20</value></ifl:property>
+        <ifl:property><key>maximumFileSize</key><value>40</value></ifl:property>
         <ifl:property><key>disconnect</key><value>1</value></ifl:property>
         <ifl:property><key>readLock</key><value>none</value></ifl:property>
+        <ifl:property><key>readLockCheckInterval</key><value>5000</value></ifl:property>
+        <ifl:property><key>file_lock_timeout</key><value>15</value></ifl:property>
         <ifl:property><key>idempotentRepository</key><value>database</value></ifl:property>
         <ifl:property><key>emptyFileHandling</key><value>processFile</value></ifl:property>
-        <ifl:property><key>maximumFileSize</key><value>40</value></ifl:property>
-        <ifl:property><key>sftpSecEnabled</key><value>1</value></ifl:property>
-        <ifl:property><key>sorting</key><value>none</value></ifl:property>
-        <ifl:property><key>includeSubFolders</key><value>0</value></ifl:property>
+        <ifl:property><key>stopOnException</key><value>1</value></ifl:property>
+        <ifl:property><key>useClusterLock</key><value>0</value></ifl:property>
+        <ifl:property><key>fastExistsCheck</key><value>1</value></ifl:property>
+        <ifl:property><key>file_sorting_criteria</key><value>sort_by_none</value></ifl:property>
+        <ifl:property><key>file_sorting_direction</key><value>sort_direction_asc</value></ifl:property>
+        <ifl:property><key>allowDeprecatedAlgorithms</key><value>0</value></ifl:property>
+        <!-- Proxy (leave as none unless required) -->
+        <ifl:property><key>proxyType</key><value>none</value></ifl:property>
+        <ifl:property><key>proxyHost</key><value/></ifl:property>
+        <ifl:property><key>proxyPort</key><value>8080</value></ifl:property>
+        <ifl:property><key>proxyProtocol</key><value>socks5</value></ifl:property>
+        <ifl:property><key>proxyAlias</key><value/></ifl:property>
+        <ifl:property><key>location_id</key><value/></ifl:property>
         <!-- Protocol metadata -->
         <ifl:property><key>TransportProtocol</key><value>SFTP</value></ifl:property>
         <ifl:property><key>MessageProtocol</key><value>File</value></ifl:property>
@@ -462,13 +487,13 @@ The SFTP Sender polls files from a remote SFTP server on a schedule. Each file b
 ```
 
 **Key properties:**
-- `host` / `port`: SFTP server hostname and port — always externalize: `{{SenderHost}}`, `{{SenderPort}}`
+- `host`: SFTP server hostname — use `ZZHOST` as dummy value; developer externalizes after import
 - `path`: remote directory — property name is `path` (NOT `directoryName`)
-- `credential_name`: deployed Security Material alias — property name uses underscore (NOT `credentialName`)
-- `authentication`: `user_password` for username+password; `public_key` for key-based
-- `noop`: `delete` removes file after processing; `move` archives to `file.move` subdirectory; `none` leaves it (risks reprocessing)
+- `credential_name`: Security Material alias — uses underscore (NOT `credentialName`)
+- `authentication`: `user_password` uses `credential_name`; `public_key` uses `privateKeyAlias` + `username`
+- `noop`: `delete` removes file after processing; `move` archives to `file.move` subdirectory
 - `system`: must exactly match the `name` attribute on the participant element
-- `scheduleKey`: XML-escaped table row controlling polling interval (timer/cron)
+- `scheduleKey`: XML-escaped row/cell table — **always include this property**; default is every 1 hour (`TIME_HOUR_INTERVAL`, `OnEveryHour=1`, HST). Without it the iFlow has no schedule and will not poll. Copy the default value exactly from the SFTP Sender block above; developer adjusts timezone/interval after import.
 
 ---
 
@@ -493,36 +518,52 @@ The SFTP Sender polls files from a remote SFTP server on a schedule. Each file b
         <ifl:property><key>componentVersion</key><value>1.13</value></ifl:property>
         <ifl:property><key>Name</key><value>SFTP</value></ifl:property>
         <ifl:property><key>system</key><value>Receiver1</value></ifl:property>
-        <!-- Connection -->
-        <ifl:property><key>host</key><value>{{ReceiverHost}}</value></ifl:property>
-        <ifl:property><key>port</key><value>{{ReceiverPort}}</value></ifl:property>
+        <ifl:property><key>direction</key><value>Receiver</value></ifl:property>
+        <!-- Connection — use ZZ-prefixed dummy values, NOT {{param}} syntax -->
+        <ifl:property><key>host</key><value>ZZHOST</value></ifl:property>
         <ifl:property><key>authentication</key><value>public_key</value></ifl:property>
         <!-- authentication: "public_key" | "user_password" -->
-        <ifl:property><key>privateKeyAlias</key><value>{{ReceiverPrivateKeyAlias}}</value></ifl:property>
-        <!-- privateKeyAlias: name of SSH key in Security Material (for public_key auth) -->
-        <ifl:property><key>username</key><value>{{ReceiverUsername}}</value></ifl:property>
+        <ifl:property><key>privateKeyAlias</key><value>ZZPRIVATEKEYALIAS</value></ifl:property>
+        <!-- privateKeyAlias: name of SSH key in Security Material (public_key auth only) -->
+        <ifl:property><key>username</key><value>ZZUSERNAME</value></ifl:property>
         <ifl:property><key>credential_name</key><value/></ifl:property>
-        <!-- credential_name: empty for public_key auth; set for user_password auth -->
+        <!-- credential_name: empty for public_key auth; use for user_password auth instead -->
+        <ifl:property><key>connectTimeout</key><value>10000</value></ifl:property>
+        <ifl:property><key>maximumReconnectAttempts</key><value>3</value></ifl:property>
+        <ifl:property><key>reconnectDelay</key><value>1000</value></ifl:property>
         <!-- File target -->
-        <ifl:property><key>path</key><value>{{ReceiverDirectory}}</value></ifl:property>
+        <ifl:property><key>path</key><value>ZZDIRECTORY</value></ifl:property>
         <!-- NOTE: property name is "path", NOT "directoryName" -->
         <ifl:property><key>fileName</key><value>${header.CamelFileName}</value></ifl:property>
-        <!-- fileName: use ${header.CamelFileName} to preserve original name, or set a static/dynamic name -->
+        <!-- fileName: ${header.CamelFileName} preserves the (possibly modified) filename from the flow -->
         <!-- File handling -->
         <ifl:property><key>fileExist</key><value>Override</value></ifl:property>
         <!-- fileExist: "Override" | "Append" | "Fail" | "Ignore" -->
         <ifl:property><key>autoCreate</key><value>1</value></ifl:property>
-        <!-- autoCreate: 1 = create target directory if it doesn't exist -->
+        <ifl:property><key>stepwise</key><value>1</value></ifl:property>
+        <ifl:property><key>flatten</key><value/></ifl:property>
+        <ifl:property><key>useTempFile</key><value>0</value></ifl:property>
+        <ifl:property><key>tempFileName</key><value>${file:name}.tmp</value></ifl:property>
+        <ifl:property><key>fileAppendTimeStamp</key><value>0</value></ifl:property>
         <ifl:property><key>sftpSecEnabled</key><value>1</value></ifl:property>
-        <ifl:property><key>disconnect</key><value>1</value></ifl:property>
+        <ifl:property><key>disconnect</key><value>0</value></ifl:property>
         <ifl:property><key>maximumFileSize</key><value>40</value></ifl:property>
+        <ifl:property><key>fastExistsCheck</key><value>1</value></ifl:property>
+        <ifl:property><key>allowDeprecatedAlgorithms</key><value>0</value></ifl:property>
+        <!-- Proxy (leave as none unless required) -->
+        <ifl:property><key>proxyType</key><value>none</value></ifl:property>
+        <ifl:property><key>proxyHost</key><value/></ifl:property>
+        <ifl:property><key>proxyPort</key><value>8080</value></ifl:property>
+        <ifl:property><key>proxyProtocol</key><value>socks5</value></ifl:property>
+        <ifl:property><key>proxyAlias</key><value/></ifl:property>
+        <ifl:property><key>location_id</key><value/></ifl:property>
         <!-- Protocol metadata -->
         <ifl:property><key>TransportProtocol</key><value>SFTP</value></ifl:property>
         <ifl:property><key>MessageProtocol</key><value>File</value></ifl:property>
-        <ifl:property><key>TransportProtocolVersion</key><value>1.13.3</value></ifl:property>
-        <ifl:property><key>MessageProtocolVersion</key><value>1.13.3</value></ifl:property>
+        <ifl:property><key>TransportProtocolVersion</key><value>1.20.1</value></ifl:property>
+        <ifl:property><key>MessageProtocolVersion</key><value>1.20.1</value></ifl:property>
         <ifl:property><key>ComponentSWCVName</key><value>external</value></ifl:property>
-        <ifl:property><key>ComponentSWCVId</key><value>1.13.3</value></ifl:property>
+        <ifl:property><key>ComponentSWCVId</key><value>1.20.1</value></ifl:property>
         <ifl:property>
             <key>cmdVariantUri</key>
             <value>ctype::AdapterVariant/cname::sap:SFTP/tp::SFTP/mp::File/direction::Receiver/version::1.13.3</value>
@@ -532,11 +573,12 @@ The SFTP Sender polls files from a remote SFTP server on a schedule. Each file b
 ```
 
 **Key properties:**
-- `privateKeyAlias`: name of the SSH private key deployed in Security Material (public key auth only)
-- `username`: the SFTP username (required for public key auth; `credential_name` holds both user+pass for user_password auth)
-- `fileExist`: how to handle existing files — `Override` replaces, `Append` appends, `Fail` throws error
-- `fileName`: to write files with a dynamic name computed in the flow, use `${header.CamelFileName}` or set a Groovy-computed header before this step
+- `privateKeyAlias`: SSH key alias in Security Material (public_key auth only) — use `ZZPRIVATEKEYALIAS`
+- `username`: SFTP login name for public_key auth — use `ZZUSERNAME`
+- `fileExist`: `Override` replaces, `Append` appends, `Fail` throws error
+- `fileName`: `${header.CamelFileName}` writes with whatever name was set earlier in the flow
 - `autoCreate`: `1` = create the target directory automatically if missing
+- `disconnect`: `0` for receiver (keep connection); `1` for sender (disconnect after poll)
 
 **Participant type reminder (SFTP):**
 ```xml
@@ -1089,66 +1131,32 @@ Every element must have a `BPMNShape` (for nodes) or `BPMNEdge` (for flows). Pos
 
 Externalized parameters are the mechanism for **environment-specific configuration** — the iFlow BPMN is identical across Dev, QAS, and Prod, but each environment has different values for the parameters. This is how SAP CPI handles environment promotion: you transport the iFlow and then configure the parameter values per environment in the tenant's Integration Operations → Configure section.
 
-**Example:** A parameter `SAPHOST` holds the target SAP system URL. On Dev it is `https://dev.example.com`, QAS `https://qas.example.com`, Prod `https://prod.example.com`. The iFlow uses `{{SAPHOST}}` and never hardcodes the URL.
+**Concept:** A parameter `SAPHOST` holds the target SAP system URL. On Dev it is `https://dev.example.com`, QAS `https://qas.example.com`, Prod `https://prod.example.com`. The iFlow uses `{{SAPHOST}}` in the BPMN and each environment sets its own value.
 
-**In BPMN property values:** use `{{ParameterName}}` anywhere a value would otherwise be hardcoded:
+**Do NOT use `{{ParamName}}` syntax when generating iFlows.** Two reasons:
+1. CPI requires a real non-empty value to already exist in the property before it can be externalized. Uploading `{{SAPHOST}}` as a value causes a save error (`COULD_NOT_SAVE_IFLOW_EXTERNALIZATION_PROPERTIES`).
+2. Externalized parameters are often **shared across multiple iFlows** in a project and managed by the transport/basis team — not set per-iFlow by the generator. The developer who receives the iFlow will handle externalization after import.
+
+**Instead: use `ZZ`-prefixed dummy values** for all mandatory fields that will need environment-specific values:
 ```xml
-<ifl:property><key>address</key><value>{{SAPHOST}}/api/endpoint</value></ifl:property>
-<ifl:property><key>credentialName</key><value>{{SAP_CREDENTIAL}}</value></ifl:property>
+<ifl:property><key>host</key><value>ZZHOST</value></ifl:property>
+<ifl:property><key>credential_name</key><value>ZZCREDENTIALNAME</value></ifl:property>
+<ifl:property><key>path</key><value>ZZDIRECTORY</value></ifl:property>
 ```
+The `ZZ` prefix is a SAP convention indicating "this is a placeholder — replace before use". It is immediately visible in the CPI UI and searchable.
 
-**`parameters.prop`** — defines the parameter keys and their default values (used as the baseline / Dev values when the iFlow is first deployed):
-```
-# parameters.prop
-SAPHOST=https://dev-sap.example.com
-SAP_CREDENTIAL=DevCredential
-MAX_RETRIES=3
-```
-
-**`parameters.propdef`** — declares the parameters with metadata (type, description). Required so CPI knows the parameters exist and shows them in the Configure UI:
-```xml
-<parameters>
-    <parameter>
-        <key>SAPHOST</key>
-        <value>https://dev-sap.example.com</value>
-        <datatype>xsd:string</datatype>
-        <description>Target SAP system base URL — set per environment on deployment</description>
-    </parameter>
-    <parameter>
-        <key>SAP_CREDENTIAL</key>
-        <value>DevCredential</value>
-        <datatype>xsd:string</datatype>
-        <description>Security Material credential alias for target SAP system</description>
-    </parameter>
-    <parameter>
-        <key>MAX_RETRIES</key>
-        <value>3</value>
-        <datatype>xsd:integer</datatype>
-        <description>Maximum retry attempts for outbound calls</description>
-    </parameter>
-</parameters>
-```
-
-**The rule: if it could ever need to change between environments without touching the iFlow code, externalize it.**
-
-Anything a Basis/ops person might need to change on QAS or Prod without involving a developer or transport is a candidate. Examples:
-- URLs and hostnames (`TARGET_URL`, `SAPHOST`)
-- Port numbers (`BACKEND_PORT`)
-- Credential alias names (`CRED_BACKEND`, `CRED_SFTP`)
-- Queue names (`JMS_QUEUE_INBOUND`)
-- Retry counts and timeout values (`MAX_RETRIES`, `CALL_TIMEOUT`)
-- Debug/trace flags (`DEBUG_ENABLED=false` on Prod, `true` on Dev)
-- Log levels (`LOG_LEVEL`)
-- Feature flags (`ENABLE_RETRY`, `SKIP_VALIDATION`)
-- Any threshold or limit that might be tuned per environment
-
-**What NOT to externalize:**
-- Values that are structurally part of the integration logic (XPath expressions, fixed field mappings)
-- Values guaranteed identical in every environment forever
+**What deserves externalization (for reference — handled by developer after import):**
+- URLs and hostnames
+- Port numbers
+- Credential alias names
+- Queue names
+- Retry counts, timeouts, thresholds
+- Debug/trace flags, log levels, feature flags
+- Anything a Basis/ops person might tune per environment without a transport
 
 **Runtime variables vs externalized params:**
-- `{{ParamName}}` — resolved at deploy/configure time, set in CPI Operations UI per environment
-- `${property.X}` / `${header.X}` — Apache Camel Simple Language, resolved at message runtime from exchange state
+- `{{ParamName}}` — configure-time, set in CPI Operations UI per environment (do not generate these)
+- `${property.X}` / `${header.X}` — Apache Camel Simple Language, resolved at message runtime from exchange state (use these freely in expressions)
 
 ---
 
@@ -1374,7 +1382,7 @@ HTTPS inbound → Content Modifier → HTTP outbound:
 11. **Timer start event** uses `bpmn2:timerEventDefinition` inside the `bpmn2:startEvent`
 12. **Local process call** references process by `processId` property = the `id` of a sibling `bpmn2:process`
 13. **ProcessDirect** adapter: sender iFlow uses ProcessDirect Receiver; calling iFlow uses ProcessDirect Sender
-14. **Externalized params** use `{{ParamName}}` syntax — these are environment-specific values (Dev/QAS/Prod URLs, credential names, queue names) configured per tenant after transport; never hardcode these values in BPMN
+14. **Externalized params — do NOT use `{{ParamName}}` syntax** when generating iFlows. CPI requires real non-empty values before externalization can be applied, and using `{{PARAM}}` as a property value causes a `COULD_NOT_SAVE_IFLOW_EXTERNALIZATION_PROPERTIES` error on save. Additionally, in large projects externalized parameters are shared across multiple iFlows and managed by the transport/basis team — the generator has no way to know the correct parameter names. Instead, use `ZZ`-prefixed dummy values (e.g., `ZZHOST`, `ZZCREDENTIALNAME`, `ZZDIRECTORY`, `ZZPRIVATEKEYALIAS`, `ZZUSERNAME`) for mandatory fields. Developers handle externalization after import via CPI Operations UI → Configure.
 
 ---
 
