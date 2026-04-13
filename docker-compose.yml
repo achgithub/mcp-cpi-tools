@@ -1,0 +1,7 @@
+services:
+  mcp-cpi-tools:
+    build: .
+    container_name: mcp-cpi-tools
+    restart: unless-stopped
+    env_file:
+      - .env
